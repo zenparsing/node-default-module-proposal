@@ -136,7 +136,7 @@ bar/
 - The word "default" has a special, and similar meaning in ES6 modules.
 - Despite "default" being a common English word, "default.js" is not widely used as a file name.
 
-In a search of all the filenames in the @latest NPM packages as of 2016-01-28, "default.js" was only found 23 times in a package root.  This particular "default.js" file was already an ES6 module.  As a filename, "default.js" was found 1968 times.  By contrast, "index.js" was found 22,607 times, and in the package root 10,282 times.
+In a [search of all the filenames in the @latest NPM packages as of 2016-01-28](https://gist.github.com/bmeck/9b234011938cd9c1f552d41db97ad005), "default.js" was only found 23 times in a package root.  This particular "default.js" file was already an ES6 module.  As a filename, "default.js" was found 1968 times.  By contrast, "index.js" was found 22,607 times, and in the package root 10,282 times.
 
 
 ## Running Modules from the Command Line
