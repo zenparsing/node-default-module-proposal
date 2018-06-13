@@ -1,21 +1,21 @@
-# A Modest Proposal for ES6 Modules in Node.js
+# A Modest Proposal for ES Modules in Node.js
 
 ## Guiding Principles
 
 - The solution must be 100% backward-compatible.
-- In the far future, developers should be able to write Node programs and libraries without knowledge of the CommonJS module system.
+- In the future, developers should be able to write Node programs and libraries without knowledge of the CommonJS module system.
 - Module resolution rules should be reasonably compatible with the module resolution rules used by browsers.
 - The ability to import a legacy package is important for adoption.
 
 ## Design Summary
 
-**1. There is no change to the behavior of `require`. It cannot be used to import ES6 modules.**
+**1. There is no change to the behavior of `require`. It cannot be used to import ES modules.**
 
 This ensures 100% backward-compatibility, while still allowing some freedom of design.
 
-**2. The only folder entry point for ES6 modules is "default.js". "package.json" files are not used for resolving ES6 module paths.**
+**2. Instead of "index.js", the entry point for ES modules is "default.js", or instead of a package.json "main", "module" is used.**
 
-A distinct entry point file name ("default.js") allows us to detect when a user is attempting to import from a legacy package or a folder containing legacy modules.
+A distinct entry point ("default.js") allows us to distinguish when a user is attempting to import from a legacy package or a folder containing CommonJS modules.
 
 **3. When `import`ing a file path, file extensions are not automatically appended.**
 
@@ -25,9 +25,13 @@ The default resolution algorithm used by web browsers will not automatically app
 
 This provides users with the ability to `import` from legacy packages.
 
-**5. `require.import(modulePath)` synchronously imports an ES6 module.**
+**5. `import(modulePath)` asynchronously imports an ES module from CommonJS.**
 
 This allows old-style modules to `import` from new-style modules.
+
+**6. Node will support a `--module` flag.**
+
+This provides the context that the module being loaded is a module, where in future this could be set by default.
 
 ## Use Cases
 
@@ -37,35 +41,35 @@ Since there is no change to the behavior of `require`, there is no change to the
 
 ### Supporting `import` for old-style packages
 
-If a "default.js" file does not exist in the package root, then it will be loaded as an old-style module with no further changes.  It just works.
+If a "default.js" file or "module" main does not exist in the package root, then it will be loaded as an old-style module with no further changes.  It just works.
 
-### Supporting `require` for ES6 packages
+### Supporting `require` for ES Module packages
 
-Since `require` cannot be directly used to import ES6 modules, we need to provide an old-style "index.js" entry point if we want to allow consumers to `require` our package:
+Since `require` cannot be directly used to import ES modules, we need to provide an old-style "index.js" entry point if we want to allow consumers to `require` our package:
 
 ```
 src/
-  [ES6 modules]
+  [ES modules]
 default.js -> src/default.js
 index.js
 ```
 
-The purpose of the "index.js" file will be to map the ES6 module into an old-style module and can be as simple as:
+The purpose of the "index.js" file will be to map the ES module into an old-style module and can be as simple as:
 
 ```js
 // [index.js]
-module.exports = require.import('./src/default.js');
+module.exports = import('./src/default.js');
 ```
 
-### Distributing both transpiled and native ES6 modules
+### Distributing both transpiled and native ES modules
 
-In this usage scenario, a package is authored in ES6 modules and transpiled to old-style modules using a compiler like Babel.  A typical directory layout for such a project is:
+In this usage scenario, a package is authored in ES modules and transpiled to old-style modules using a compiler like Babel.  A typical directory layout for such a project is:
 
 ```
 lib/
   [Transpiled modules]
 src/
-  [ES6 modules]
+  [ES modules]
 index.js -> lib/index.js
 ```
 
@@ -75,7 +79,7 @@ Users that `require` the package will load the transpiled version of the code.  
 lib/
   [Transpiled modules]
 src/
-  [ES6 modules]
+  [ES modules]
 index.js -> lib/index.js
 default.js -> src/index.js
 ```
@@ -86,7 +90,7 @@ We might also want our transpiler to rename "default.js" source files to "index.
 lib/
   [Transpiled modules]
 src/
-  [ES6 modules]
+  [ES modules]
 index.js -> lib/index.js
 default.js -> src/default.js
 ```
@@ -110,7 +114,7 @@ var someModule = require('./some-module');
 to:
 
 ```js
-var someModule = require.import('./some-module.js').default;
+var someModule = (await import('./some-module.js')).default;
 ```
 
 ### Deep-linking into a package
@@ -133,10 +137,10 @@ bar/
 ## Why "default.js"?
 
 - "default.html" is frequently used as a folder entry point for web servers.
-- The word "default" has a special, and similar meaning in ES6 modules.
+- The word "default" has a special, and similar meaning in ES modules.
 - Despite "default" being a common English word, "default.js" is not widely used as a file name.
 
-In a [search of all the filenames in the @latest NPM packages as of 2016-01-28](https://gist.github.com/bmeck/9b234011938cd9c1f552d41db97ad005), "default.js" was only found 23 times in a package root.  Of these packages, 8 are using "default.js" as an ES6 module entry point already (they are published by @zenparsing, so no surprises there).  The remaining 15 packages would need to be updated in order to allow `import`ing them from other ES6 modules.
+In a [search of all the filenames in the @latest NPM packages as of 2016-01-28](https://gist.github.com/bmeck/9b234011938cd9c1f552d41db97ad005), "default.js" was only found 23 times in a package root.  Of these packages, 8 are using "default.js" as an ES module entry point already (they are published by @zenparsing, so no surprises there).  The remaining 15 packages would need to be updated in order to allow `import`ing them from other ES modules.
 
 As a filename, "default.js" was found 1968 times.
 
@@ -149,7 +153,7 @@ When a user executes
 $ node my-module.js
 ```
 
-from the command line, there is absolutely no way for Node to tell whether "my-module.js" is a legacy CJS module or an ES6 module. Due to the need of this knowledge for various interactive scenarios such as the entry file being provided over STDIN, node will support a `--module` flag.
+from the command line, there is absolutely no way for Node to tell whether "my-module.js" is a legacy CJS module or an ES module. Due to the need of this knowledge for various interactive scenarios such as the entry file being provided over STDIN, node will support a `--module` flag.
 
 ```sh
 $ node --module my-module.js
@@ -174,7 +178,7 @@ Loads _X_ from a module at path _Y_.  _T_ is either "require" or "import".
 
 1. If T is "import",
     1. If X is a file, then
-        1. If extname(X) is ".js", load X as ES6 module text. STOP
+        1. If extname(X) is ".js", load X as ES module text. STOP
         1. If extname(X) is ".json", parse X to a JavaScript Object.  STOP
         1. If extname(X) is ".node", load X as binary addon.  STOP
         1. THROW "not found"
@@ -188,8 +192,11 @@ Loads _X_ from a module at path _Y_.  _T_ is either "require" or "import".
 ### LOAD_AS_DIRECTORY(X, T)
 
 1. If T is "import",
-    1. If X/default.js is a file, load X/default.js as ES6 module text.  STOP
-    1. NOTE: If X/default.js is not a file, then fallback to legacy behavior
+    1. If X/default.js is a file, load X/default.js as ES module text.  STOP
+    1. If X/package.json is a file,
+       1. Parse X/package.json, and look for "module" field.
+       1. load X/(json module field) as ES module text. STOP
+    1. NOTE: If neither of the above are a file, then fallback to legacy behavior
 1. If X/package.json is a file,
     1. Parse X/package.json, and look for "main" field.
     1. let M = X + (json main field)
