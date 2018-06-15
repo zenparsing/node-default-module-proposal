@@ -40,7 +40,7 @@ An experimental implementation of this proposal is available at https://github.c
 ```
 node --experimental-modules --module x.js
 node --experimental-modules -m x.js
-node -m -e "export var hello = 'world'"
+node --experimental-modules -m -e "export var hello = 'world'"
 ```
 
 ## Use Cases
