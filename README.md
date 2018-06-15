@@ -33,6 +33,16 @@ This allows old-style modules to `import` from new-style modules.
 
 This provides the context that the module being loaded is a module, where in future this could be set by default.
 
+## Implementation
+
+An experimental implementation of this proposal is available at https://github.com/guybedford/node/tree/module-default, supporting NodeJS usage:
+
+```
+node --experimental-modules --module x.js
+node --experimental-modules -m x.js
+node -m -e "export var hello = 'world'"
+```
+
 ## Use Cases
 
 ### Existing modules
