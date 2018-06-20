@@ -144,6 +144,23 @@ bar/
   default.js (Entry point for import)
 ```
 
+### Interaction with ".mjs"
+
+This proposal can work alongside the ".mjs" proposal if necessary:
+
+1. The ES module resolver can support loading files ending in ".mjs"
+2. "main" files as ".mjs" can be supported as loading as ES modules
+
+The above cause no further statting in the module system.
+
+Further,
+
+* "default.js" is still checked by the ES directory resolve, with no support for "default.mjs"
+* "index.js" is still checked by the CJS direcotry resolve, with no support for "index.mjs"
+
+A variant could support ".mjs" for both default and index, although this would incur some
+unnecessary statting.
+
 ## Why "default.js"?
 
 - "default.html" is frequently used as a folder entry point for web servers.
@@ -188,6 +205,7 @@ Loads _X_ from a module at path _Y_.  _T_ is either "require" or "import".
 
 1. If T is "import",
     1. If X is a file, then
+        1. If extname(X) is ".mjs", load X as ES module text. STOP
         1. If extname(X) is ".js", load X as ES module text. STOP
         1. If extname(X) is ".json", parse X to a JavaScript Object.  STOP
         1. If extname(X) is ".node", load X as binary addon.  STOP
@@ -210,6 +228,7 @@ Loads _X_ from a module at path _Y_.  _T_ is either "require" or "import".
 1. If X/package.json is a file,
     1. Parse X/package.json, and look for "main" field.
     1. let M = X + (json main field)
+    1. If extname(M) is ".mjs", load M as ES module text. STOP
     1. LOAD_AS_FILE(M, "require")
 1. If X/index.js is a file, load X/index.js as JavaScript text.  STOP
 1. If X/index.json is a file, parse X/index.json to a JavaScript object. STOP
