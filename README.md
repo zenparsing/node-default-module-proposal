@@ -13,7 +13,7 @@
 
 This ensures 100% backward-compatibility, while still allowing some freedom of design.
 
-**2. Instead of "index.js", the entry point for ES modules is "default.js", or instead of a package.json "main", "module" is used.**
+**2. Instead of "index.js", the entry point for ES modules is "default.js", or instead of a package.json "main", "default" is used.**
 
 A distinct entry point ("default.js") allows us to distinguish when a user is attempting to import from a legacy package or a folder containing CommonJS modules.
 
@@ -51,7 +51,7 @@ Since there is no change to the behavior of `require`, there is no change to the
 
 ### Supporting `import` for old-style packages
 
-If a "default.js" file or "module" main does not exist in the package root, then it will be loaded as an old-style module with no further changes.  It just works.
+If a "default.js" file or "default" main does not exist in the package root, then it will be loaded as an old-style module with no further changes.  It just works.
 
 ### Supporting `require` for ES Module packages
 
@@ -136,7 +136,7 @@ A common practice with old-style packages is to allow the user to `require` indi
 var deepModule = require('foo/bar');
 ```
 
-If the package author wants to support both `require`ing and `import`ing into a nested module, they can do so by creating a folder for each "deep link", which contains both an old-style and new-style entry point:
+If the package author wants to support both `require`ing and `import`ing into a nested module, they might do so by creating a folder for each "deep link", which contains both an old-style and new-style entry point:
 
 ```
 bar/
@@ -144,7 +144,7 @@ bar/
   default.js (Entry point for import)
 ```
 
-## Why "default.js"?
+## Why "default"?
 
 - "default.html" is frequently used as a folder entry point for web servers.
 - The word "default" has a special, and similar meaning in ES modules.
@@ -154,6 +154,9 @@ In a [search of all the filenames in the @latest NPM packages as of 2016-01-28](
 
 As a filename, "default.js" was found 1968 times.
 
+> If when testing this proposal it turns out that using the package.json "module" property instead of "default" works in a large percentage of cases
+  of existing usage, then it could be considered to use `"default.js"` and `"module"` in the package.json file. But this would have to be based
+  on ensuring the tests have been run against common packages to verify that such compatibility will be supported.
 
 ## Running Modules from the Command Line
 
@@ -204,7 +207,7 @@ Loads _X_ from a module at path _Y_.  _T_ is either "require" or "import".
 1. If T is "import",
     1. If X/default.js is a file, load X/default.js as ES module text.  STOP
     1. If X/package.json is a file,
-       1. Parse X/package.json, and look for "module" field.
+       1. Parse X/package.json, and look for "default" field.
        1. load X/(json module field) as ES module text. STOP
     1. NOTE: If neither of the above are a file, then fallback to legacy behavior
 1. If X/package.json is a file,
