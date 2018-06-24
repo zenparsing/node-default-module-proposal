@@ -17,19 +17,15 @@ This ensures 100% backward-compatibility, while still allowing some freedom of d
 
 A distinct entry point ("default.js") allows us to distinguish when a user is attempting to import from a legacy package or a folder containing CommonJS modules.
 
-**3. When `import`ing a file path, file extensions are not automatically appended.**
-
-The default resolution algorithm used by web browsers will not automatically append file extensions.
-
-**4. When `import`ing a directory, if a "default.js" file cannot be found, the algorithm will attempt to find an entry point using legacy `require` rules, by consulting "package.json" and looking for "index.*" files.**
+**3. When `import`ing a package, if a "module" and "default.js" file cannot be found, the algorithm will attempt to find an entry point using legacy `require` rules, by consulting "package.json" and looking for "index.*" files.**
 
 This provides users with the ability to `import` from legacy packages.
 
-**5. `import(modulePath)` asynchronously imports an ES module from CommonJS.**
+**4. `import(modulePath)` asynchronously imports an ES module from CommonJS.**
 
 This allows old-style modules to `import` from new-style modules.
 
-**6. Node will support a `--module` flag.**
+**5. Node will support a `--module` flag.**
 
 This provides the context that the module being loaded is a module, where in future this could be set by default.
 
@@ -172,55 +168,76 @@ from the command line, there is absolutely no way for Node to tell whether "my-m
 $ node --module my-module.js
 ```
 
+## Resolver variations
+
+This specification specifies only how to handle the problem of determining the source text type.
+
+Other aspects of the resolver which can be specified separately include:
+
+* what file formats are supported by import
+* .mjs support
+* whether to automatically add file extensions or not for the ES resolver
+
 ## Lookup Algorithm Psuedo-Code
 
-### LOAD_MODULE(X, Y, T)
+This spec covers only the ES resolver, with the CommonJS resolver remaining exactly as currently implemented.
 
-Loads _X_ from a module at path _Y_.  _T_ is either "require" or "import".
+The function LEGACY_LOAD(X) refers to delegating resolution to the existing CommonJS resolver implementation.
+
+The LOAD_AS_DIRECTORY function from the CommonJS resolver is also referenced here.
+
+### ES_LOAD_MODULE(X, Y)
+
+Loads _X_ from a module at path _Y_.
 
 1. If X is a core module, then
     1. return the core module
     1. STOP
 1. If X begins with './' or '/' or '../'
-    1. LOAD_AS_FILE(Y + X, T)
-    1. LOAD_AS_DIRECTORY(Y + X, T)
-1. LOAD_NODE_MODULES(X, dirname(Y), T)
+    1. ES_LOAD_FILE(Y + X)
+    1. ES_LOAD_DIRECTORY(Y + X)
+1. ES_LOAD_NODE_MODULES(X, dirname(Y))
 1. THROW "not found"
 
-### LOAD_AS_FILE(X, T)
+### ES_LOAD_FILE(X)
 
-1. If T is "import",
-    1. If X is a file, then
-        1. If extname(X) is ".js", load X as ES module text. STOP
-        1. If extname(X) is ".json", parse X to a JavaScript Object.  STOP
-        1. If extname(X) is ".node", load X as binary addon.  STOP
-        1. THROW "not found"
-1. Else,
-    1. Assert: T is "require"
-    1. If X is a file, load X as CJS module text.  STOP
-    1. If X.js is a file, load X.js as CJS module text.  STOP
-    1. If X.json is a file, parse X.json to a JavaScript Object.  STOP
-    1. If X.node is a file, load X.node as binary addon.  STOP
+This method loads the file at X, treating ".js" files as ES module source texts and
+calling STOP on resolution.
 
-### LOAD_AS_DIRECTORY(X, T)
+Exact semantics to be specified elsewhere for default file extension adding, and determining
+non-JS source text interpretations based on file extension.
 
-1. If T is "import",
-    1. If X/default.js is a file, load X/default.js as ES module text.  STOP
-    1. If X/package.json is a file,
-       1. Parse X/package.json, and look for "default" field.
-       1. load X/(json module field) as ES module text. STOP
-    1. NOTE: If neither of the above are a file, then fallback to legacy behavior
-1. If X/package.json is a file,
-    1. Parse X/package.json, and look for "main" field.
-    1. let M = X + (json main field)
-    1. LOAD_AS_FILE(M, "require")
-1. If X/index.js is a file, load X/index.js as JavaScript text.  STOP
-1. If X/index.json is a file, parse X/index.json to a JavaScript object. STOP
-1. If X/index.node is a file, load X/index.node as binary addon.  STOP
+If the file is not found, no STOP call is made resulting in fall-through here.
 
-### LOAD_NODE_MODULES(X, START, T)
+### ES_LOAD_DIRECTORY(X)
+
+1. If X/default.js is a file, load X/default.js as an ES module text. STOP
+1. Let C be the result of LOAD_PACKAGE_JSON(X).
+1. If C has a "default" field string then,
+   1. let M be the "default" field of C.
+   1. ES_LOAD_FILE(X/M)
+1. Defer to legacy CommonJS resolver function, LOAD_AS_DIRECTORY(X).
+
+### ES_LOAD_NODE_MODULES(X, START, T)
 
 1. let DIRS=NODE_MODULES_PATHS(START)
-2. for each DIR in DIRS:
-    1. LOAD_AS_FILE(DIR/X, T)
-    1. LOAD_AS_DIRECTORY(DIR/X, T)
+1. for each DIR in DIRS:
+    1. If the directory at DIR/X exists then,
+       1. ES_LOAD_PACKAGE(DIR/X)
+
+### ES_LOAD_PACKAGE(X)
+
+1. Let C be the result of LOAD_PACKAGE_JSON(X).
+1. If C has a "default" field string then,
+1.   let M be the "default" field of C.
+1.   ES_LOAD_FILE(X/M)
+1. If X/default.js exists, load X/default.js as ES module text. STOP
+1. LEGACY_LOAD(X)
+
+### LOAD_PACKAGE_JSON(X)
+
+1. If the file at X/package.json exists then,
+   1. If the file at X/package.json is invalid JSON then,
+      1. THROW "resolution error"
+   1. Return the parsed JSON object for X/package.json
+1. Return an empty object
